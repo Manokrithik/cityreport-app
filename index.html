@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CityReport</title>
+    <link rel="manifest" href="./manifest.json">
+    <link rel="stylesheet" href="./style.css">
+    <meta name="theme-color" content="#2563eb">
+    
+    <!-- Leaflet Map Integration -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+<body>
+    <!-- Sidebar Overlay & Container -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h3>Admin Portal</h3>
+            <button onclick="toggleSidebar()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <div class="sidebar-content">
+            
+            <!-- Login View -->
+            <div id="admin-login-view">
+                <p style="margin-bottom:12px; font-size:14px; color:var(--text-muted);">Login for City Officials</p>
+                
+                <div id="admin-login-step1">
+                    <button class="btn" onclick="document.getElementById('admin-login-step1').style.display='none'; document.getElementById('admin-login-step2').style.display='block';">Admin Login</button>
+                </div>
+                
+                <div id="admin-login-step2" style="display:none;">
+                    <input type="text" id="admin-username" placeholder="Username" style="margin-bottom:12px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; width:100%;">
+                    <input type="password" id="admin-password" placeholder="Password" style="margin-bottom:12px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; width:100%;">
+                    <button class="btn" onclick="adminLogin()">Login</button>
+                </div>
+            </div>
+
+            <!-- Dashboard View -->
+            <div id="admin-dashboard-view" style="display: none;">
+                <button onclick="adminLogout()" style="margin-bottom:20px; width:100%; padding: 8px; border-radius: 8px; border: 1px solid var(--danger); background: transparent; color: var(--danger); cursor:pointer;">Logout</button>
+                <div id="admin-reports">
+                    <!-- Reports injected here -->
+                </div>
+            </div>
+            
+            <hr style="border:0; border-top:1px solid var(--border); margin:20px 0;">
+            
+            <!-- Citizen Logout -->
+            <div id="citizen-logout-view">
+                <p style="margin-bottom:12px; font-size:14px; color:var(--text-muted);">Citizen Account</p>
+                <button onclick="citizenLogout()" style="width:100%; padding: 12px; border-radius: 8px; border: 1px solid var(--danger); background: var(--bg); color: var(--danger); cursor:pointer; font-weight:bold;">Sign Out (Citizen)</button>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="app-container">
+        <header>
+            <div style="display:flex; align-items:center;">
+                <button class="hamburger-btn" onclick="toggleSidebar()">☰</button>
+                <div style="display:flex; flex-direction:column;">
+                    <h1>CityReport</h1>
+                    <div id="civic-score" style="font-size: 12px; font-weight:600; color:var(--primary);">🏆 Civic Score: 0</div>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap: 12px;">
+                <div id="notif-bell" onclick="toggleNotifs()" style="position:relative; font-size:20px; cursor:pointer;">
+                    🔔
+                    <span id="notif-badge" style="display:none; position:absolute; top:-4px; right:-4px; background:var(--danger); color:white; font-size:10px; padding:2px 4px; border-radius:10px; font-weight:bold;">0</span>
+                </div>
+                <div id="network-status" class="status-online">Online</div>
+            </div>
+            
+            <!-- Notifications Dropdown -->
+            <div id="notif-dropdown" style="display:none; position:absolute; top:70px; right:20px; background:white; width:280px; box-shadow:0 4px 12px rgba(0,0,0,0.15); border-radius:12px; border:1px solid var(--border); padding:12px; z-index:50;">
+                <h4 style="margin-bottom:8px;">Notifications</h4>
+                <div id="notif-list" style="max-height:200px; overflow-y:auto; font-size:13px; color:var(--text-muted);">
+                    No new notifications.
+                </div>
+            </div>
+        </header>
+
+        <div class="content" id="main-content">
+            <!-- Citizen Login View -->
+            <div id="view-citizen-login" class="view">
+                <h2>Welcome Citizen! 👋</h2>
+                <p style="margin-bottom: 20px; color: var(--text-muted);">Sign in to start reporting issues and earning Civic Points.</p>
+                
+                <div style="display:flex; margin-bottom: 20px; border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+                    <div id="tab-phone" class="login-tab active-tab" onclick="switchLoginTab('phone')" style="flex:1; text-align:center; padding:10px; cursor:pointer; font-weight:bold;">📱 Mobile</div>
+                    <div id="tab-email" class="login-tab" onclick="switchLoginTab('email')" style="flex:1; text-align:center; padding:10px; cursor:pointer; font-weight:bold;">📧 Gmail</div>
+                </div>
+
+                <div class="form-group" id="input-phone-group">
+                    <label>Mobile Number</label>
+                    <input type="tel" id="citizen-phone" placeholder="e.g. 555-1234" style="width:100%; padding:14px; border:1px solid var(--border); border-radius:10px; margin-bottom:12px;">
+                </div>
+
+                <div class="form-group" id="input-email-group" style="display:none;">
+                    <label>Gmail Address</label>
+                    <input type="email" id="citizen-email" placeholder="e.g. citizen@gmail.com" style="width:100%; padding:14px; border:1px solid var(--border); border-radius:10px; margin-bottom:12px;">
+                </div>
+                
+                <div class="form-group" id="otp-group" style="display:none;">
+                    <label>Enter OTP Code</label>
+                    <input type="number" id="citizen-otp" placeholder="Use '1234' for testing" style="width:100%; padding:14px; border:1px solid var(--border); border-radius:10px; margin-bottom:12px;">
+                </div>
+                
+                <button class="btn" id="btn-send-otp" onclick="sendOtp()">Send OTP</button>
+                <button class="btn" id="btn-verify-otp" onclick="verifyOtp()" style="display:none;">Verify & Login</button>
+            </div>
+
+            <!-- REPORT VIEW -->
+            <div id="view-report" class="view active">
+                <div class="form-group">
+                    <label>Add Photo (Optional)</label>
+                    <label class="photo-upload">
+                        <input type="file" id="photo-input" accept="image/*" capture="environment">
+                        <span id="photo-placeholder">📸 Tap to take photo</span>
+                        <img id="photo-preview" alt="Preview">
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="category">
+                        <option value="pothole">Pothole / Road Damage</option>
+                        <option value="streetlight">Broken Streetlight</option>
+                        <option value="waste">Illegal Dumping / Waste</option>
+                        <option value="graffiti">Graffiti / Vandalism</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="description" placeholder="Describe the issue..."></textarea>
+                </div>
+
+                <div class="form-group toggle-group">
+                    <input type="checkbox" id="anonymous-toggle" checked>
+                    <label for="anonymous-toggle" style="margin:0;">Report Anonymously</label>
+                </div>
+                
+                <div id="emergency-alert">
+                    <h3>🚨 Emergency Detected</h3>
+                    <p>It looks like you are reporting an emergency. This app is for non-emergencies only.</p>
+                    <a href="tel:911">Call 911 Now</a>
+                </div>
+
+                <button class="btn" id="submit-btn">Submit Report</button>
+            </div>
+
+            <!-- MAP / LIST VIEW -->
+            <div id="view-map" class="view" style="height: 100%; display:none; flex-direction:column;">
+                <div id="map-container" style="flex:1; border-radius:12px; z-index:1;"></div>
+            </div>
+        </div>
+
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="switchTab('report')">Report</div>
+            <div class="nav-item" onclick="switchTab('map')">Community Map</div>
+        </div>
+    </div>
+
+    <script src="./app.js"></script>
+</body>
+</html>

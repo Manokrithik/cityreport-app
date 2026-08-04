@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CityReport Admin</title>
+    <link rel="stylesheet" href="./style.css">
+    <style>
+        .admin-container { padding: 24px; max-width: 800px; margin: 0 auto; background: white; min-height: 100vh;}
+        .report-row { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid var(--border); align-items: center;}
+        .status-select { padding: 8px; border-radius: 4px; border: 1px solid var(--border); }
+        #login-view { display: flex; flex-direction: column; gap: 16px; max-width: 300px; margin: 100px auto; }
+        #dashboard-view { display: none; }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        
+        <div id="login-view">
+            <h2>Admin Login</h2>
+            <input type="text" id="username" placeholder="Username" style="padding: 12px; border: 1px solid var(--border); border-radius: 8px;">
+            <input type="password" id="password" placeholder="Password" style="padding: 12px; border: 1px solid var(--border); border-radius: 8px;">
+            <button class="btn" onclick="login()">Login</button>
+        </div>
+
+        <div id="dashboard-view">
+            <header style="padding: 0 0 20px 0; display:flex; justify-content:space-between;">
+                <h2>City Worker Dashboard</h2>
+                <button onclick="logout()" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--danger); background: transparent; color: var(--danger); cursor:pointer;">Logout</button>
+            </header>
+            
+            <div id="admin-reports">
+                <!-- Reports list -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        
+        // Check for token on load
+        if (localStorage.getItem('adminToken')) {
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('dashboard-view').style.display = 'block';
+            loadAdminReports();
+        }
+
+        async function login() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            
+            const res = await fetch(`${API_URL}/login`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: u, password: p})
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('adminToken', data.token);
+                document.getElementById('login-view').style.display = 'none';
+                document.getElementById('dashboard-view').style.display = 'block';
+                loadAdminReports();
+            } else {
+                alert('Invalid credentials (try admin / admin)');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('adminToken');
+            document.getElementById('login-view').style.display = 'flex';
+            document.getElementById('dashboard-view').style.display = 'none';
+        }
+
+        async function loadAdminReports() {
+            const res = await fetch(`${API_URL}/reports`);
+            const reports = await res.json();
+            
+            const list = document.getElementById('admin-reports');
+            list.innerHTML = '';
+            
+            reports.forEach(r => {
+                const row = document.createElement('div');
+                row.className = 'report-row';
+                row.innerHTML = `
+                    <div>
+                        <strong>${r.category.toUpperCase()}</strong><br>
+                        <small>${new Date(r.timestamp).toLocaleString()} | 👍 ${r.upvotes}</small><br>
+                        <span>${r.description}</span>
+                    </div>
+                    <div>
+                        ${!r.is_read ? `<button onclick="markAsRead('${r.id}')" style="margin-right:8px; padding:6px; background:#eff6ff; border:1px solid #3b82f6; color:#3b82f6; border-radius:4px; cursor:pointer;">👀 Mark Read</button>` : ''}
+                        <select class="status-select" id="select-${r.id}" onchange="updateStatus('${r.id}', this.value)">
+                            <option value="open" ${r.status === 'open' ? 'selected' : ''}>Open</option>
+                            <option value="in_progress" ${r.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="resolved" ${r.status === 'resolved' ? 'selected' : ''}>Resolved</option>
+                        </select>
+                        <input type="file" id="photo-${r.id}" style="display:none" accept="image/*" onchange="resolveWithPhoto('${r.id}')">
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        async function updateStatus(id, newStatus) {
+            if (newStatus === 'resolved') {
+                alert('You must provide a completion photo to resolve this issue.');
+                document.getElementById(`photo-${id}`).click();
+                return;
+            }
+            
+            const token = localStorage.getItem('adminToken');
+            const res = await fetch(`${API_URL}/reports/${id}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({status: newStatus})
+            });
+            
+            if (res.ok) {
+                console.log("Status updated");
+            } else {
+                alert('Failed to update status.');
+                loadAdminReports();
+            }
+        }
+
+        async function resolveWithPhoto(id) {
+            const photoInput = document.getElementById(`photo-${id}`);
+            if (!photoInput.files[0]) {
+                alert('A photo is required to resolve an issue.');
+                loadAdminReports(); // Reset select
+                return;
+            }
+
+            const token = localStorage.getItem('adminToken');
+            const formData = new FormData();
+            formData.append('resolution_photo', photoInput.files[0]);
+
+            const res = await fetch(`${API_URL}/reports/${id}/resolve`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            if (res.ok) {
+                alert('Status updated to Resolved. Proof photo uploaded, and user earned +50 Civic Points!');
+                loadAdminReports();
+            } else {
+                alert('Failed to resolve issue.');
+                loadAdminReports();
+            }
+        }
+
+        async function markAsRead(id) {
+            const token = localStorage.getItem('adminToken');
+            const res = await fetch(`${API_URL}/reports/${id}/read`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (res.ok) {
+                loadAdminReports();
+            } else {
+                alert('Failed to mark as read');
+            }
+        }
+    </script>
+</body>
+</html>

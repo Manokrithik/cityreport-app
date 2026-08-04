@@ -1,0 +1,16 @@
+{
+  "name": "Civic Reporter",
+  "short_name": "CityReport",
+  "description": "Offline-first mobile reporting app for municipal services.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#cbd5e1",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Check_green_icon.svg/1024px-Check_green_icon.svg.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
