@@ -65,7 +65,7 @@ window.sendOtp = async function() {
             document.getElementById('btn-send-otp').style.display = 'none';
             document.getElementById('otp-group').style.display = 'block';
             document.getElementById('btn-verify-otp').style.display = 'block';
-            alert(`OTP Sent to ${identifier}! Check the backend console if .env is missing. (Or use 1234 for testing)`);
+            alert(`OTP sent to ${identifier}! Check your phone for the code.`);
         } else {
             alert('Failed to send OTP.');
             document.getElementById('btn-send-otp').textContent = 'Send OTP';
