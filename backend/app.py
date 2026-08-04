@@ -156,27 +156,27 @@ def send_email_otp(email, otp):
         print(f"[FALLBACK] OTP for {email} is: {otp}")
 
 def send_sms_otp(phone, otp):
-    sid = os.environ.get('TWILIO_ACCOUNT_SID')
-    token = os.environ.get('TWILIO_AUTH_TOKEN')
-    from_phone = os.environ.get('TWILIO_PHONE_NUMBER')
+    sid = os.environ.get('N8N_WEBHOOK_URL')
     
-    if not sid or not token or not from_phone or sid == 'your_account_sid':
-        print(f"[WARNING] Missing TWILIO credentials. OTP for {phone} is: {otp}")
+    
+    
+        if not sid:
+        print(f"[WARNING] N8N_WEBHOOK_URL not set. OTP for {phone} is: {otp}")
         return
         
     try:
-        url = f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
-        auth = (sid, token)
-        data = {
-            'To': phone,
-            'From': from_phone,
-            'Body': f"Your CityReport login code is: {otp}"
-        }
-        res = requests.post(url, auth=auth, data=data)
+                res = requests.post(sid, json={"phone": phone, "otp": otp})
+        
+        
+            
+            
+            
+
+        
         if res.status_code in [200, 201]:
             print(f"[OK] OTP sent to SMS: {phone}")
         else:
-            print(f"[ERROR] Twilio Error: {res.text}")
+            print(f"[ERROR] Webhook Error: {res.text}")
             print(f"[FALLBACK] OTP for {phone} is: {otp}")
     except Exception as e:
         print(f"[ERROR] Failed to send SMS OTP to {phone}: {e}")
